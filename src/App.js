@@ -1,71 +1,130 @@
-import React from 'react';
-import { Form, Select, InputNumber, DatePicker, Switch, Slider, Button } from 'antd';
-import './App.css';
+import React, { useEffect, useState } from 'react'
+import { Layout, Form, Input, Button, Card, Typography, message } from 'antd'
+import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { encode } from "base-64"
+import Fade from 'react-reveal/Fade';
+import UserDetail from './UserDetail.js'
+import PandaLogo from './panda.png'
+import 'antd/dist/antd.css'
 
-const { Option } = Select;
+const App = () => {
+  const [verify, setVerify] = useState(false)
+  const authUser = 'panda-dev-auth-client'
+  const authPass = 'ZCuuZzRzyfWEKNL7uQEQhggiGdbrGuMNLCKDKKKvogPfkEgeEokYfnwMFHwcmjKb'
+  var jwt = require('jsonwebtoken');
 
-const App = () => (
-  <>
-    <section style={{textAlign: 'center'}}>
-      <h1 style={{textAlign: 'center'}}>Ant Design</h1>
-      <img style={{width: '40px', height: '40px'}} src="https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg"/>
-    </section>
-    <Form style={{ marginTop: 32 }}>
-      <Form.Item
-        label="数字输入框"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 8 }}
-      >
-        <InputNumber min={1} max={10} defaultValue={3} />
-        <span className="ant-form-text"> 台机器</span>
-        <a href="https://ant.design">链接文字</a>
-      </Form.Item>
-      <Form.Item
-        label="开关"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 8 }}
-      >
-        <Switch defaultChecked />
-      </Form.Item>
-      <Form.Item
-        label="滑动输入条"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 8 }}
-      >
-        <Slider defaultValue={70} />
-      </Form.Item>
-      <Form.Item
-        label="选择器"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 8 }}
-      >
-        <Select defaultValue="lucy" style={{ width: 192 }}>
-          <Option value="jack">jack</Option>
-          <Option value="lucy">lucy</Option>
-          <Option value="disabled" disabled>disabled</Option>
-          <Option value="yiminghe">yiminghe</Option>
-        </Select>
-      </Form.Item>
-      <Form.Item
-        label="日期选择框"
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 8 }}
-      >
-        <DatePicker />
-      </Form.Item>
-      <Form.Item>
-        
-      </Form.Item>
-      <Form.Item wrapperCol={{ span: 8, offset: 8 }}>
-        <Button type="primary" htmlType="submit">
-          确定
-        </Button>
-        <Button style={{ marginLeft: 8 }}>
-          取消
-        </Button>
-      </Form.Item>
-    </Form>
-  </>
-);
+  const { Title } = Typography
+  const formItemLayout = {
+    labelCol: {
+      xs: { span: 24 },
+      sm: { span: 8 },
+    },
+  }
 
-export default App;
+  const logOut = () => {
+    localStorage.removeItem('access_token')
+  }
+
+  const login = async (values) => {
+    const formdata = new FormData()
+    const headers = new Headers()
+    formdata.append('grant_type', 'password')
+    formdata.append('username', values?.username)
+    formdata.append('password', values?.password)
+    headers.append('Authorization', 'Basic ' + encode(authUser + ":" + authPass))
+    fetch(`${process.env.REACT_APP_ENV}`, {
+      method: 'POST',
+      headers: headers,
+      body: formdata
+    })
+      .then(async (response) => {
+        if (response.status === 200) {
+          const res_json = await response?.json()
+          localStorage.setItem('access_token', res_json.access_token)
+          localStorage.setItem('refresh_token', res_json.refresh_token)
+          localStorage.setItem('expires', res_json.expires_in)
+          localStorage.setItem('cusData', JSON.stringify(res_json))
+          setVerify(true)
+        } else {
+          logOut()
+          message.error(`${response.status}${' '}:${' '}ไม่สามารถทำรายการได้`)
+        }
+      })
+      .catch((error) => {
+        logOut()
+        console.error(error);
+      });
+  }
+
+  useEffect(() => {
+  }, [])
+
+  if (!verify) {
+    return (
+      <div>
+        <Layout style={{ height: '100vh', display: 'flex', alignItems: 'center', backgroundColor: '#296194', }}>
+          <Fade>
+            <Card
+              style={{
+                boxShadow: '0px 5px 6px -1px rgba(0,0,0,0.15)',
+                borderRadius: '.85rem',
+                textAlign: 'center',
+                marginTop: '10rem',
+                padding: '1rem',
+                height: 'auto',
+                width: 400,
+              }}
+            >
+              <div>
+                <Title level={2}><img src={PandaLogo} alt={'logo'} style={{ width: 'auto', height: '50px', marginBottom: '1rem' }} /></Title></div>
+              <Form
+                {...formItemLayout}
+                name="login_form"
+                onFinish={login}
+              >
+                <Form.Item
+                  name="username"
+                  rules={[{ required: true, message: 'Please input your Username!' }]}
+                >
+                  <Input
+                    placeholder="Username"
+                    prefix={<UserOutlined className="site-form-item-icon" />}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="password"
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Please input your Password!',
+                    },
+                  ]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined className="site-form-item-icon" />}
+                    type="password"
+                    placeholder="Password"
+                  />
+                </Form.Item>
+                <Form.Item>
+                  <Button block size="large" type="primary" htmlType="submit" className="login-form-button">
+                    Log in
+                </Button>
+                </Form.Item>
+              </Form>
+            </Card>
+          </Fade>
+        </Layout>
+      </div>
+    )
+  }
+  return (
+    <>
+      <Fade>
+        <UserDetail />
+      </Fade>
+    </>
+  )
+}
+
+export default App
